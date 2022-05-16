@@ -125,6 +125,7 @@ GROUP BY
 def get_candidat_med(is_final, candidat_name):
     urne_vote_sql = session\
     .query(
+        UrneVote.annee,
         func.avg(ResultatCondidatParti.value).label('resultat'),
         Region.department_name,
     )\
@@ -317,7 +318,7 @@ if __name__ == "__main__":
                             "xOffset": {"field": "courant"},
                             "color": {"field": "courant"}
                         }
-                    }, use_container_width=True)
+                    })
 
                     with st.expander("Voir details"):
                         st.dataframe(df_president_tendance_region_annee.set_index('annee'))
@@ -332,7 +333,7 @@ if __name__ == "__main__":
                             .sum()
                     )
 
-                    st.vega_lite_chart(df_ptra_by_region, {
+                    st.vega_lite_chart(df_ptra_by_region2, {
                             'mark': {'type': 'bar', 'tooltip': True},
                             "encoding": {
                                 "x": {"field": "annee"},
@@ -340,9 +341,9 @@ if __name__ == "__main__":
                                 "xOffset": {"field": "courant"},
                                 "color": {"field": "courant"}
                             }
-                        }, use_container_width=True)
+                        })
                     with st.expander("Voir details"):
-                        st.dataframe(df_president_tendance_region_annee.set_index('annee'))  
+                        st.dataframe(df_ptra_by_region2.set_index('annee'))
         
         
         st.subheader("Seuil moyen par regions")
