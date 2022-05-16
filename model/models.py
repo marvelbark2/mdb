@@ -1,10 +1,14 @@
+"""Models module"""
+import os.path
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import QueuePool
 
-engine = create_engine('sqlite:///db/mdb.db')
+db_file = f'sqlite:///{os.path.dirname(os.path.abspath("__file__"))}/data/db/mdb.db'
+engine = create_engine(db_file, poolclass=QueuePool)
 
 Base = declarative_base(name="Model")
 Session = sessionmaker()
@@ -12,12 +16,14 @@ Session.configure(bind=engine)
 session = Session()
 
 class Region(Base):
+    """Class Region"""
     __tablename__ = "region"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     department_code = Column(Integer)
     department_name = Column(String)
 
 class Parti(Base):
+    """Class Parti"""
     __tablename__ = "parti"
     id = Column(Integer, primary_key=True)
     parti_name = Column(String)
@@ -40,17 +46,17 @@ class CandidatParti(Base):
 
 class UrneVote(Base):
     __tablename__ = "urne_vote"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     circonscription = Column(Integer)
-    region_id = Column(Integer, ForeignKey('region.id'))
+    region_id = Column(Integer, ForeignKey('region.department_code'))
     annee = Column(String)
     final_round = Column(Boolean, default=False)
 
 class ResultatCondidatParti(Base):
     __tablename__ = "resultat_candidat"
     id = Column(Integer, primary_key=True)
-    urne_vote_id = Column(Integer, ForeignKey('urne_vote.id'))  
-    candidat_parti = Column(Integer, ForeignKey('candidat_parti.id'))  
+    urne_vote_id = Column(Integer, ForeignKey('urne_vote.id'), index=True)  
+    candidat_parti = Column(Integer, ForeignKey('candidat_parti.id'), index=True)  
     value = Column(Integer, default=0)
 
 class ResultatMetaInfo(Base):
