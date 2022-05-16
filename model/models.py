@@ -51,6 +51,7 @@ class UrneVote(Base):
     region_id = Column(Integer, ForeignKey('region.department_code'))
     annee = Column(String)
     final_round = Column(Boolean, default=False)
+    is_legis = Column(Boolean, default=False)
 
 class ResultatCondidatParti(Base):
     __tablename__ = "resultat_candidat"
