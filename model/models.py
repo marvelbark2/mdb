@@ -46,18 +46,18 @@ class CandidatParti(Base):
 
 class UrneVote(Base):
     __tablename__ = "urne_vote"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     circonscription = Column(Integer)
-    region_id = Column(Integer, ForeignKey('region.department_code'))
-    annee = Column(String)
+    region_id = Column(Integer, ForeignKey('region.department_code'), index=True)
+    annee = Column(String, index=True)
     final_round = Column(Boolean, default=False)
     is_legis = Column(Boolean, default=False)
 
 class ResultatCondidatParti(Base):
     __tablename__ = "resultat_candidat"
     id = Column(Integer, primary_key=True)
-    urne_vote_id = Column(Integer, ForeignKey('urne_vote.id'), index=True)  
-    candidat_parti = Column(Integer, ForeignKey('candidat_parti.id'), index=True)  
+    urne_vote_id = Column(Integer, ForeignKey('urne_vote.id'), index=True)
+    candidat_parti = Column(Integer, ForeignKey('candidat_parti.id'), index=True)
     value = Column(Integer, default=0)
 
 class ResultatMetaInfo(Base):
