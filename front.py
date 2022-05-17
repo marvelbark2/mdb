@@ -364,4 +364,12 @@ if __name__ == "__main__":
 
         st.subheader("Resultat de LAGUILLER par region")
         df_ki = get_candidat_med(False, 'LAGUILLER')
+        st.vega_lite_chart(df_ki, {
+                            'mark': {'type': 'bar', 'tooltip': True},
+                            "encoding": {
+                                "x": {"field": "department_name", "sort": "-y"},
+                                "y": {"field": "resultat", "type": "quantitative"},
+                                "color": {"field": "department_name"},
+                            }
+                        })
         st.dataframe(df_ki)
