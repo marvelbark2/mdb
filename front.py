@@ -371,5 +371,5 @@ if __name__ == "__main__":
                                 "y": {"field": "resultat", "type": "quantitative"},
                                 "color": {"field": "department_name"},
                             }
-                        })
+                        }, use_container_width=True)
         st.dataframe(df_ki)
