@@ -137,24 +137,19 @@ def get_candidat_med(is_final, candidat_name):
     return pd.read_sql(sql = urne_vote_sql.statement, con = session.bind)
 
 @st.experimental_memo
-def get_sql_query(is_final):
-    urne_vote_sql = session\
-    .query(
-        UrneVote.annee,
-        func.min(ResultatCondidatParti.value).label('resultat'),
-        Region.department_name,
-        Candidat.candidat_name
-
-    )\
-      .join(ResultatCondidatParti, ResultatCondidatParti.urne_vote_id == UrneVote.id)\
-        .join(Region, Region.department_code == UrneVote.region_id)\
-            .join(CandidatParti)\
-                .join(Candidat)\
-                 .filter(UrneVote.is_legis == 0 ,UrneVote.final_round == is_final)\
-                     .group_by(Region.department_name, Candidat.candidat_name)\
-                         .order_by(desc(text('resultat')))
-    print(urne_vote_sql.statement)
-    return pd.read_sql(sql = urne_vote_sql.statement, con = session.bind)
+def get_sql_query():
+    urne_vote_sql = """
+        SELECT c.candidat_name, uv.annee, r.department_name, (sum(rc.value) * 100.0 / sum(rm.votants)) as perc
+        FROM resultat_candidat rc
+        JOIN urne_vote uv on uv.id = rc.urne_vote_id AND uv.final_round = 1
+        JOIN resultat_metainfo rm on uv.id = rm.urne_vote_id
+        join candidat_parti cp on cp.id = rc.candidat_parti
+        join candidat c on c.id = cp.candidat_id
+        join region r on r.department_code = uv.region_id
+        GROUP BY c.candidat_name, uv.annee, r.department_name
+        ORDER BY perc
+    """
+    return pd.read_sql(sql = urne_vote_sql, con = session.bind)
 
 couleur_parti = {
             "EDroit": "#0A87C3",
@@ -384,3 +379,6 @@ if __name__ == "__main__":
                             }
                         }, use_container_width=True)
         st.dataframe(df_ki)
+
+        st.subheader('Requette mystere')
+        st.dataframe(get_sql_query())
