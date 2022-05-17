@@ -19,12 +19,8 @@ def get_president_national_annee(is_final):
     urne_vote_sql = session\
     .query(
         UrneVote.annee.label('annee'),
-        func.sum(ResultatMetaInfo.inscripts).label('total des inscripts'),
-        func.sum(ResultatMetaInfo.exprimes).label('total des Éxprimés'),
-        func.sum(ResultatMetaInfo.nullparts).label('total des Blancs et nuls'),
-        func.sum(ResultatMetaInfo.votants).label('total des Votants'),
-    )\
-        .filter(UrneVote.is_legis == 0, UrneVote.final_round == is_final)\
+        (func.sum(ResultatMetaInfo.exprimes) * 100.0 / func.sum(ResultatMetaInfo.inscripts)).label('resultat'),
+    ) .filter(UrneVote.is_legis == 0, UrneVote.final_round == is_final)\
         .join(ResultatMetaInfo)\
             .group_by(UrneVote.annee)
     return pd.read_sql(sql = urne_vote_sql.statement, con = session.bind)
@@ -43,7 +39,7 @@ def get_president_regional_annee(is_final):
         .join(Region, Region.department_code == UrneVote.region_id)\
         .join(ResultatMetaInfo)\
             .filter(UrneVote.is_legis == 0, UrneVote.final_round == is_final)\
-            .group_by(UrneVote.annee, Region.department_name)
+            .group_by(UrneVote.annee, Region.department_name, UrneVote.final_round)
     return pd.read_sql(sql = urne_vote_sql.statement, con = session.bind)
 
 @st.experimental_memo
@@ -140,6 +136,26 @@ def get_candidat_med(is_final, candidat_name):
 
     return pd.read_sql(sql = urne_vote_sql.statement, con = session.bind)
 
+@st.experimental_memo
+def get_sql_query(is_final):
+    urne_vote_sql = session\
+    .query(
+        UrneVote.annee,
+        func.min(ResultatCondidatParti.value).label('resultat'),
+        Region.department_name,
+        Candidat.candidat_name
+
+    )\
+      .join(ResultatCondidatParti, ResultatCondidatParti.urne_vote_id == UrneVote.id)\
+        .join(Region, Region.department_code == UrneVote.region_id)\
+            .join(CandidatParti)\
+                .join(Candidat)\
+                 .filter(UrneVote.is_legis == 0 ,UrneVote.final_round == is_final)\
+                     .group_by(Region.department_name, Candidat.candidat_name)\
+                         .order_by(desc(text('resultat')))
+    print(urne_vote_sql.statement)
+    return pd.read_sql(sql = urne_vote_sql.statement, con = session.bind)
+
 couleur_parti = {
             "EDroit": "#0A87C3",
             "DROIT": "#51A8E3",
@@ -150,6 +166,7 @@ couleur_parti = {
 }
 
 if __name__ == "__main__":
+    
     st.title("Election Presidentielle")
     st.header("TP BDM")
     with st.container():
@@ -158,13 +175,10 @@ if __name__ == "__main__":
         with fr_col:
             st.write('1er Tour')
             df_meta_annee = get_president_national_annee(False)
-            df_meta_annee['resultat'] = (
-                df_meta_annee['total des Éxprimés'] * 100 / df_meta_annee['total des Votants']
-            )
             st.vega_lite_chart(df_meta_annee, {
                     'mark': {'type': 'bar', 'tooltip': True},
                     'encoding': {
-                        'y': {'field': 'resultat', "scale": {"domain": [90, 100]}, 'type': 'quantitative'},
+                        'y': {'field': 'resultat', "scale": {"domain": [50, 100]}, 'type': 'quantitative'},
                         'x': {'field': 'annee', 'type': 'nominal'},
                         'color': {'field': 'annee', 'type': 'nominal'},
                     },
@@ -178,13 +192,10 @@ if __name__ == "__main__":
         with se_col:
             st.write('2eme Tour')
             df_meta_annee = get_president_national_annee(True)
-            df_meta_annee['resultat'] = (
-                df_meta_annee['total des Éxprimés'] * 100 / df_meta_annee['total des Votants']
-            )
             st.vega_lite_chart(df_meta_annee, {
                     'mark': {'type': 'bar', 'tooltip': True},
                     'encoding': {
-                        'y': {'field': 'resultat', "scale": {"domain": [90, 100]}, 'type': 'quantitative'},
+                        'y': {'field': 'resultat', "scale": {"domain": [50, 100]}, 'type': 'quantitative'},
                         'x': {'field': 'annee', 'type': 'nominal'},
                         'color': {'field': 'annee', 'type': 'nominal'},
                     },
@@ -200,7 +211,7 @@ if __name__ == "__main__":
         with fr2_col:
             st.write('1er tour')
             df_meta = get_president_regional_annee(False)
-            df_meta['avg'] = df_meta['total des Éxprimés'] * 100 / df_meta['total des Votants']
+            df_meta['avg'] = df_meta['total des Éxprimés'] * 100 / df_meta['total des inscripts']
             region_name_aggr = st.selectbox(
                 'Quel departement ?',
                 sorted(set(df_meta['Region'])),
@@ -219,7 +230,7 @@ if __name__ == "__main__":
                 },
                 "encoding": {
                     "x": {"field": "annee", "title": f"Annee dans {region_name_aggr}"},
-                    "y": {"field": "avg", "scale": {"domain": [90, 100]}, 
+                    "y": {"field": "avg", "scale": {"domain": [50, 100]}, 
                           "type": "quantitative", "title": "% Participation"},
                     "color": {"field": "annee"}
                 }
@@ -228,7 +239,7 @@ if __name__ == "__main__":
         with sec2_col:
             st.write('2eme tour')
             df_meta = get_president_regional_annee(True)
-            df_meta['avg'] = df_meta['total des Éxprimés'] * 100 / df_meta['total des Votants']
+            df_meta['avg'] = df_meta['total des Éxprimés'] * 100 / df_meta['total des inscripts']
             region_name_aggr = st.selectbox(
                 'Quel departement ?',
                 sorted(set(df_meta['Region'])),
@@ -247,7 +258,7 @@ if __name__ == "__main__":
                 },
                 "encoding": {
                     "x": {"field": "annee", "title": f"Annee dans {region_name_aggr}"},
-                    "y": {"field": "avg", "scale": {"domain": [90, 100]}, "type": "quantitative", "title": "% Participation"},
+                    "y": {"field": "avg", "scale": {"domain": [50, 100]}, "type": "quantitative", "title": "% Participation"},
                     "color": {"field": "annee"}
                 }
             }, use_container_width=True)
